@@ -69,8 +69,8 @@ def create_value_picks_graphic(opportunities, games_data_map=None, output_filena
             color='white', transform=ax.transAxes)
 
     # Starting Y position - proper spacing from title
-    y_start = 0.88
-    row_height = 0.135  # Fixed height per row
+    y_start = 0.89
+    row_height = 0.087  # Smaller height to fit 10 picks
 
     # Draw each pick as a row
     for idx, pick in enumerate(picks):
@@ -130,9 +130,9 @@ def draw_pick_row(ax, pick, y_pos, game_history, game_values, row_idx):
         bg_color = '#0f1419'
 
     # Background - no spacing between rows
-    bg_height = 0.135
+    bg_height = 0.087
     bg = mpatches.Rectangle(
-        (0.02, y_pos - 0.070), 0.96, bg_height,
+        (0.02, y_pos - 0.044), 0.96, bg_height,
         facecolor=bg_color,
         edgecolor='#2a2f3e',
         linewidth=0.5,
