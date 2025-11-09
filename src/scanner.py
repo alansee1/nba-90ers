@@ -8,9 +8,11 @@ from src.player_stats import get_player_stats, calculate_90er_floors
 from src.odds_cache import save_odds_to_cache, load_odds_from_cache, has_cache, get_cache_info
 from src.player_stats_cache import save_player_stats, load_player_stats
 from src.graphics_generator import create_value_picks_graphic
+from src.database import save_scanner_results
 import numpy as np
 import time
 import sys
+from datetime import date
 
 
 def analyze_all_players(player_props, delay=0.6, use_fresh_data=False):
@@ -23,7 +25,7 @@ def analyze_all_players(player_props, delay=0.6, use_fresh_data=False):
         use_fresh_data: If True, skip cache and always fetch fresh stats
 
     Returns:
-        Tuple of (opportunities list, games_data_map dict)
+        Tuple of (opportunities list, games_data_map dict, stats dict)
     """
     print("\n" + "="*60)
     print(f"Analyzing {len(player_props)} Players")
@@ -113,12 +115,18 @@ def analyze_all_players(player_props, delay=0.6, use_fresh_data=False):
     print(f"\nTotal value opportunities: {len(all_opportunities)}")
     print(f"{'='*60}\n")
 
-    return all_opportunities, games_data_map
+    stats = {
+        'analyzed': players_analyzed,
+        'skipped': players_skipped
+    }
+
+    return all_opportunities, games_data_map, stats
 
 
 def find_value_opportunities(player_name, floors, betting_lines):
     """
     Compare 90%er floors to betting lines to find value
+    Only returns HIGH confidence picks (floor >= line)
 
     Args:
         player_name: Player's name
@@ -126,7 +134,7 @@ def find_value_opportunities(player_name, floors, betting_lines):
         betting_lines: Dict of {stat: line}
 
     Returns:
-        List of value opportunities
+        List of HIGH confidence value opportunities
     """
     opportunities = []
     tolerance = 0.10  # 10%
@@ -137,13 +145,11 @@ def find_value_opportunities(player_name, floors, betting_lines):
 
         floor = floors[stat]['floor']
 
-        # Calculate 10% range around the line
-        lower_bound = line * (1 - tolerance)
-        upper_bound = line * (1 + tolerance)
-
-        # Check if floor is above lower bound (Over has value)
-        if floor >= lower_bound:
-            confidence = "HIGH" if floor >= line else "MEDIUM"
+        # Only include HIGH confidence picks (floor >= line)
+        if floor >= line:
+            # Calculate 10% range around the line
+            lower_bound = line * (1 - tolerance)
+            upper_bound = line * (1 + tolerance)
 
             opportunities.append({
                 'player': player_name,
@@ -151,7 +157,7 @@ def find_value_opportunities(player_name, floors, betting_lines):
                 'line': line,
                 'floor': floor,
                 'avg': floors[stat]['avg'],
-                'confidence': confidence,
+                'confidence': 'HIGH',  # Always HIGH now
                 'lower_bound': lower_bound,
                 'upper_bound': upper_bound
             })
@@ -231,6 +237,10 @@ def main():
     elif use_fresh_data and has_cache():
         print("\n🔄 --fresh flag set, skipping cache...")
 
+    # Track API requests remaining and games count
+    api_requests_remaining = None
+    games_reviewed = None
+
     if player_props is None:
         # Fetch from API
         print("\nStep 1: Fetching betting lines from The Odds API...")
@@ -242,6 +252,13 @@ def main():
                 print("\n❌ No player props available")
                 return
 
+            # Capture API quota and games count
+            api_requests_remaining = fetcher.requests_remaining
+            if api_requests_remaining and api_requests_remaining != 'Unknown':
+                api_requests_remaining = int(api_requests_remaining)
+
+            games_reviewed = fetcher.games_count
+
             # Save to cache for next time
             save_odds_to_cache(player_props)
 
@@ -252,7 +269,7 @@ def main():
     # Step 2: Analyze all players
     print("\nStep 2: Analyzing all players with props...")
     try:
-        opportunities, games_data_map = analyze_all_players(player_props, use_fresh_data=use_fresh_data)
+        opportunities, games_data_map, stats = analyze_all_players(player_props, use_fresh_data=use_fresh_data)
     except Exception as e:
         print(f"\n❌ Error during player analysis: {e}")
         import traceback
@@ -262,9 +279,31 @@ def main():
     # Step 3: Print report
     print_report(opportunities)
 
-    # Step 4: Generate graphic
+    # Step 4: Save to database
     if opportunities:
-        print("\nStep 3: Generating graphic...")
+        print("\nStep 3: Saving picks to database...")
+        try:
+            run_id = save_scanner_results(
+                sport='nba',
+                scan_date=date.today(),
+                picks=opportunities,
+                stats=stats,
+                game_date=None,  # Could extract from games_data_map if needed
+                api_requests_remaining=api_requests_remaining,
+                games_reviewed=games_reviewed
+            )
+            if run_id:
+                print(f"✅ Saved to database (run #{run_id})")
+                if api_requests_remaining:
+                    print(f"📊 API quota remaining: {api_requests_remaining}")
+                if games_reviewed:
+                    print(f"🏀 Games reviewed: {games_reviewed}")
+        except Exception as e:
+            print(f"⚠️  Database save failed (continuing anyway): {e}")
+
+    # Step 5: Generate graphic
+    if opportunities:
+        print("\nStep 4: Generating graphic...")
         graphic_path = create_value_picks_graphic(opportunities, games_data_map)
         if graphic_path:
             print(f"\n📸 Graphic ready to tweet!")

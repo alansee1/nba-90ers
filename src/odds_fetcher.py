@@ -17,6 +17,7 @@ class OddsFetcher:
         self.base_url = 'https://api.the-odds-api.com/v4'
         self.sport_key = 'basketball_nba'
         self.requests_remaining = None  # Track remaining API requests
+        self.games_count = None  # Track number of games reviewed
 
         if not self.api_key:
             raise ValueError("API key required. Set ODDS_API_KEY env var or pass to constructor")
@@ -171,7 +172,11 @@ class OddsFetcher:
 
         if not games:
             print("No games found")
+            self.games_count = 0
             return {}
+
+        # Track games count
+        self.games_count = len(games)
 
         # Step 2: Fetch props for each game
         all_props = {}
