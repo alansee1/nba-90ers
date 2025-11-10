@@ -1,4 +1,4 @@
-# NBA 90%ers - Automation Setup
+# FlooorGang - Automation Setup
 
 ## Overview
 
@@ -49,7 +49,7 @@ crontab -l
 
 You should see:
 ```
-0 * * * * cd /Users/alansee/Projects/nba-90ers && /usr/bin/python3 scheduler.py >> logs/scheduler.log 2>&1
+0 * * * * cd /Users/alansee/Projects/flooorgang && /usr/bin/python3 scheduler.py >> logs/scheduler.log 2>&1
 ```
 
 ### 4. Monitor Logs

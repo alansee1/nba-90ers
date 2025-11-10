@@ -1,6 +1,6 @@
-# NBA 90%ers Analysis Tool
+# FlooorGang
 
-Find players and teams that consistently hit certain stat thresholds.
+Automated NBA prop betting analysis tool that finds players who consistently hit stat thresholds (their "floor") by analyzing historical performance against betting lines.
 
 ## Setup
 
