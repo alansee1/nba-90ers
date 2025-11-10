@@ -54,11 +54,11 @@ def get_player_stats(player_name, season='2025-26'):
 
 def calculate_90er_floors(games_df, stats_to_analyze):
     """
-    Calculate the 10th percentile (90%er floor) for each stat
-    This is the value the player hits or exceeds in 90% of games
+    Calculate the absolute floor (minimum value) for each stat
+    This is the player's worst performance - they hit this in 100% of games
     """
     print(f"\n{'='*60}")
-    print(f"Step 2: Calculating 90%er Floors (10th percentile)")
+    print(f"Step 2: Calculating Floors (absolute minimum)")
     print(f"{'='*60}")
 
     floors = {}
@@ -70,17 +70,12 @@ def calculate_90er_floors(games_df, stats_to_analyze):
 
         values = games_df[stat].values
 
-        # Calculate 10th percentile
-        # This means: player is AT LEAST this good in 90% of games
-        percentile_10 = np.percentile(values, 10)
-
-        # Round UP to next whole number (ceiling)
-        # e.g., 29.3 becomes 30, 1.9 becomes 2
-        if stat in ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG3M']:
-            percentile_10 = np.ceil(percentile_10)
+        # Use absolute minimum as the floor
+        # This is the worst game - player hits this or better in 100% of games
+        floor_value = values.min()
 
         floors[stat] = {
-            'floor': percentile_10,
+            'floor': floor_value,
             'avg': values.mean(),
             'min': values.min(),
             'max': values.max(),
@@ -88,7 +83,7 @@ def calculate_90er_floors(games_df, stats_to_analyze):
         }
 
         print(f"\n{stat}:")
-        print(f"  90%er Floor: {percentile_10:.1f} (hits this or better in 90% of games)")
+        print(f"  Floor: {floor_value:.1f} (worst game - hits this or better in 100% of games)")
         print(f"  Average: {values.mean():.1f}")
         print(f"  Range: {values.min():.0f} - {values.max():.0f}")
         print(f"  Last 5 games: {values[:5].tolist()}")

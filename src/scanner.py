@@ -126,8 +126,8 @@ def analyze_all_players(player_props, delay=0.6, use_fresh_data=False):
 
 def find_value_opportunities(player_name, floors, betting_lines):
     """
-    Compare 90%er floors to betting lines to find value
-    Only returns HIGH confidence picks (floor >= line)
+    Compare floors to betting lines to find value
+    Returns picks where floor is within 10% of the betting line
 
     Args:
         player_name: Player's name
@@ -135,7 +135,7 @@ def find_value_opportunities(player_name, floors, betting_lines):
         betting_lines: Dict of {stat: line}
 
     Returns:
-        List of HIGH confidence value opportunities
+        List of value opportunities where floor >= lower_bound (line * 0.9)
     """
     opportunities = []
     tolerance = 0.10  # 10%
@@ -146,19 +146,19 @@ def find_value_opportunities(player_name, floors, betting_lines):
 
         floor = floors[stat]['floor']
 
-        # Only include HIGH confidence picks (floor >= line)
-        if floor >= line:
-            # Calculate 10% range around the line
-            lower_bound = line * (1 - tolerance)
-            upper_bound = line * (1 + tolerance)
+        # Calculate 10% range around the line
+        lower_bound = line * (1 - tolerance)
+        upper_bound = line * (1 + tolerance)
 
+        # Include picks where floor is within 10% of the line
+        if floor >= lower_bound:
             opportunities.append({
                 'player': player_name,
                 'stat': stat,
                 'line': line,
                 'floor': floor,
                 'avg': floors[stat]['avg'],
-                'confidence': 'HIGH',  # Always HIGH now
+                'confidence': 'HIGH',  # Single tier - all picks are HIGH
                 'lower_bound': lower_bound,
                 'upper_bound': upper_bound
             })
