@@ -240,7 +240,8 @@ def main():
 
     # Track API requests remaining and games count
     api_requests_remaining = None
-    games_reviewed = None
+    games_scheduled = None
+    games_with_props = None
 
     if player_props is None:
         # Fetch from API
@@ -258,7 +259,8 @@ def main():
             if api_requests_remaining and api_requests_remaining != 'Unknown':
                 api_requests_remaining = int(api_requests_remaining)
 
-            games_reviewed = fetcher.games_count
+            games_scheduled = fetcher.games_scheduled
+            games_with_props = fetcher.games_with_props
 
             # Save to cache for next time
             save_odds_to_cache(player_props)
@@ -291,14 +293,15 @@ def main():
                 stats=stats,
                 game_date=None,  # Could extract from games_data_map if needed
                 api_requests_remaining=api_requests_remaining,
-                games_reviewed=games_reviewed
+                games_scheduled=games_scheduled,
+                games_with_props=games_with_props
             )
             if run_id:
                 print(f"✅ Saved to database (run #{run_id})")
                 if api_requests_remaining:
                     print(f"📊 API quota remaining: {api_requests_remaining}")
-                if games_reviewed:
-                    print(f"🏀 Games reviewed: {games_reviewed}")
+                if games_scheduled and games_with_props:
+                    print(f"🏀 Games: {games_with_props}/{games_scheduled} had props")
         except Exception as e:
             print(f"⚠️  Database save failed (continuing anyway): {e}")
 

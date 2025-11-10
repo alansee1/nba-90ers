@@ -17,7 +17,8 @@ class OddsFetcher:
         self.base_url = 'https://api.the-odds-api.com/v4'
         self.sport_key = 'basketball_nba'
         self.requests_remaining = None  # Track remaining API requests
-        self.games_count = None  # Track number of games reviewed
+        self.games_scheduled = None  # Track number of games scheduled
+        self.games_with_props = None  # Track number of games with actual props
 
         if not self.api_key:
             raise ValueError("API key required. Set ODDS_API_KEY env var or pass to constructor")
@@ -172,14 +173,16 @@ class OddsFetcher:
 
         if not games:
             print("No games found")
-            self.games_count = 0
+            self.games_scheduled = 0
+            self.games_with_props = 0
             return {}
 
-        # Track games count
-        self.games_count = len(games)
+        # Track total games scheduled
+        self.games_scheduled = len(games)
 
         # Step 2: Fetch props for each game
         all_props = {}
+        games_with_props_count = 0
 
         for i, game in enumerate(games, 1):
             event_id = game.get('id')
@@ -191,6 +194,7 @@ class OddsFetcher:
             props = self.get_player_props_for_game(event_id)
 
             if props:
+                games_with_props_count += 1
                 print(f"  Found props for {len(props)} players (Requests remaining: {self.requests_remaining})")
                 # Merge into all_props
                 for player, stats in props.items():
@@ -204,7 +208,12 @@ class OddsFetcher:
             if i < len(games):
                 time.sleep(delay)
 
+        # Track how many games actually had props
+        self.games_with_props = games_with_props_count
+
         print(f"\n{'='*60}")
+        print(f"Games scheduled: {self.games_scheduled}")
+        print(f"Games with props: {self.games_with_props}")
         print(f"Total players with props: {len(all_props)}")
         print(f"API Requests Remaining: {self.requests_remaining}/500 (Free Tier)")
         print(f"{'='*60}\n")

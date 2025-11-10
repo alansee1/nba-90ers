@@ -122,7 +122,7 @@ def save_picks(run_id, picks, sport, scan_date, game_date=None, season='2025-26'
         return 0
 
 
-def save_scanner_results(sport, scan_date, picks, stats, game_date=None, api_requests_remaining=None, games_reviewed=None):
+def save_scanner_results(sport, scan_date, picks, stats, game_date=None, api_requests_remaining=None, games_scheduled=None, games_with_props=None):
     """
     Convenience function to save complete scanner results
 
@@ -133,7 +133,8 @@ def save_scanner_results(sport, scan_date, picks, stats, game_date=None, api_req
         stats: Dict with 'analyzed', 'skipped' counts
         game_date: Date of first game (optional)
         api_requests_remaining: Remaining API quota from The Odds API (optional)
-        games_reviewed: Number of games reviewed (optional)
+        games_scheduled: Total number of games scheduled (optional)
+        games_with_props: Number of games with player props available (optional)
 
     Returns:
         run_id: ID of created run
@@ -158,9 +159,12 @@ def save_scanner_results(sport, scan_date, picks, stats, game_date=None, api_req
     if api_requests_remaining is not None:
         update_data['api_requests_remaining'] = api_requests_remaining
 
-    # Add games count if available
-    if games_reviewed is not None:
-        update_data['games_reviewed'] = games_reviewed
+    # Add games counts if available
+    if games_scheduled is not None:
+        update_data['games_scheduled'] = games_scheduled
+
+    if games_with_props is not None:
+        update_data['games_with_props'] = games_with_props
 
     update_scanner_run(run_id, **update_data)
 
