@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FlooorGang NBA 90ers Scanner - Serverless deployment
+
+Globals:
+  Function:
+    Timeout: 900  # 15 minutes (scanner can take a while)
+    MemorySize: 512
+    Runtime: python3.11
+    Architectures:
+      - x86_64
+
+Parameters:
+  OddsApiKey:
+    Type: String
+    Description: The Odds API key
+    NoEcho: true
+
+  SupabaseUrl:
+    Type: String
+    Description: Supabase project URL
+
+  SupabaseAnonKey:
+    Type: String
+    Description: Supabase anon key
+    NoEcho: true
+
+  SupabaseServiceRoleKey:
+    Type: String
+    Description: Supabase service role key
+    NoEcho: true
+
+  TwitterApiKey:
+    Type: String
+    Description: Twitter API key
+    NoEcho: true
+    Default: ""
+
+  TwitterApiSecret:
+    Type: String
+    Description: Twitter API secret
+    NoEcho: true
+    Default: ""
+
+  TwitterAccessToken:
+    Type: String
+    Description: Twitter access token
+    NoEcho: true
+    Default: ""
+
+  TwitterAccessTokenSecret:
+    Type: String
+    Description: Twitter access token secret
+    NoEcho: true
+    Default: ""
+
+  ScheduleExpression:
+    Type: String
+    Description: EventBridge schedule expression (cron or rate)
+    Default: "cron(0 17 * * ? *)"  # 5 PM UTC (12 PM EST) daily
+
+Resources:
+  ScannerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: flooorgang-scanner
+      CodeUri: .
+      Handler: lambda_handler.lambda_handler
+      Description: FlooorGang NBA 90ers scanner that finds betting opportunities
+      Environment:
+        Variables:
+          ODDS_API_KEY: !Ref OddsApiKey
+          SUPABASE_URL: !Ref SupabaseUrl
+          SUPABASE_ANON_KEY: !Ref SupabaseAnonKey
+          SUPABASE_SERVICE_ROLE_KEY: !Ref SupabaseServiceRoleKey
+          TWITTER_API_KEY: !Ref TwitterApiKey
+          TWITTER_API_SECRET: !Ref TwitterApiSecret
+          TWITTER_ACCESS_TOKEN: !Ref TwitterAccessToken
+          TWITTER_ACCESS_TOKEN_SECRET: !Ref TwitterAccessTokenSecret
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref ScheduleExpression
+            Description: Run scanner daily
+            Enabled: true
+      Policies:
+        - Statement:
+          - Sid: CloudWatchLogsPolicy
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+
+Outputs:
+  ScannerFunctionArn:
+    Description: Scanner Lambda Function ARN
+    Value: !GetAtt ScannerFunction.Arn
+    Export:
+      Name: FlooorGangScannerArn
+
+  ScannerFunctionName:
+    Description: Scanner Lambda Function Name
+    Value: !Ref ScannerFunction
+    Export:
+      Name: FlooorGangScannerName

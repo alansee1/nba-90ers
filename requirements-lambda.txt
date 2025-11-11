@@ -1,0 +1,12 @@
+# Lambda-optimized requirements
+# These will be bundled with the Lambda deployment
+
+nba_api==1.4.1
+pandas==2.1.4
+matplotlib==3.8.2
+requests==2.31.0
+supabase==2.10.0
+tweepy==4.14.0
+python-dotenv==1.0.0
+
+# Note: seaborn is not needed for scanner_v2, only in old graphics generator

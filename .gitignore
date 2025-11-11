@@ -36,3 +36,8 @@ Thumbs.db
 
 # Development diary - local context for Claude
 dev_diary/
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+response.json
