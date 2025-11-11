@@ -9,18 +9,26 @@ load_dotenv()
 from odds_fetcher_v2 import OddsFetcher
 from player_stats_v2 import PlayerStatsAnalyzer
 from team_stats_v2 import TeamStatsAnalyzer
+from database_v2 import save_scanner_results
 from typing import List, Dict
+from datetime import date
 
 
 class Scanner:
     """Main scanner that finds betting opportunities"""
 
-    def __init__(self, odds_threshold: int = -500):
+    def __init__(self, odds_threshold: int = -500, save_to_db: bool = True, sport: str = 'nba', season: str = '2025-26'):
         """
         Args:
             odds_threshold: Skip picks with odds worse than this (default -500)
+            save_to_db: Save results to database (default True)
+            sport: Sport type (default 'nba')
+            season: Season identifier (default '2025-26')
         """
         self.odds_threshold = odds_threshold
+        self.save_to_db = save_to_db
+        self.sport = sport
+        self.season = season
         self.odds_fetcher = OddsFetcher()
         self.stats_analyzer = PlayerStatsAnalyzer()
         self.team_analyzer = TeamStatsAnalyzer()
@@ -65,6 +73,7 @@ class Scanner:
         picks = []
         floors = player_analysis['floors']
         games = player_analysis['games']
+        team_abbr = player_analysis.get('team_abbr')
 
         for stat in ['PTS', 'REB', 'AST', 'FG3M']:
             # Check if we have lines for this stat
@@ -87,6 +96,7 @@ class Scanner:
             # This is a good pick!
             picks.append({
                 'player': player_name,
+                'team_abbr': team_abbr,
                 'stat': stat,
                 'floor': floor,
                 'line': best_line['line'],
@@ -254,6 +264,42 @@ class Scanner:
             print(f"   All picks had odds worse than {self.odds_threshold} or no lines below floor\n")
 
         print(f"API Requests remaining: {self.odds_fetcher.requests_remaining}/20,000\n")
+
+        # Step 6: Save to database
+        if self.save_to_db and all_picks:
+            print(f"\n💾 STEP 6: Saving to database...")
+
+            # Calculate stats
+            player_picks_count = len([p for p in all_picks if 'player' in p])
+            team_picks_count = len([p for p in all_picks if 'team' in p])
+
+            # Get entities analyzed/skipped from earlier steps
+            total_entities = len(player_analyses) + len(team_analyses) if 'team_analyses' in locals() else len(player_analyses)
+            entities_skipped = (len(player_names) - len(player_analyses)) if 'player_names' in locals() else 0
+            if 'team_names' in locals() and 'team_analyses' in locals():
+                entities_skipped += (len(team_names) - len(team_analyses))
+
+            stats = {
+                'analyzed': total_entities,
+                'skipped': entities_skipped,
+                'player_picks': player_picks_count,
+                'team_picks': team_picks_count
+            }
+
+            # Save results
+            run_id = save_scanner_results(
+                sport=self.sport,
+                scan_date=date.today(),
+                picks=all_picks,
+                stats=stats,
+                api_requests_remaining=int(self.odds_fetcher.requests_remaining) if self.odds_fetcher.requests_remaining else None,
+                season=self.season
+            )
+
+            if run_id:
+                print(f"✓ Saved to database (run #{run_id})")
+            else:
+                print("⚠️  Database save skipped (no Supabase credentials)")
 
         return all_picks
 

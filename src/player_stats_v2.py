@@ -75,9 +75,23 @@ class PlayerStatsAnalyzer:
             # Get last N games
             recent = df.head(self.max_games)
 
+            # Extract team abbreviation from most recent game's MATCHUP
+            # Format is like "NYK vs. BOS" or "NYK @ BOS" where first team is player's team
+            team_abbr = None
+            try:
+                if 'MATCHUP' in recent.columns and len(recent) > 0:
+                    matchup = recent.iloc[0]['MATCHUP']
+                    # Extract first team abbreviation (before vs. or @)
+                    if matchup and isinstance(matchup, str):
+                        team_abbr = matchup.split()[0]
+            except Exception as e:
+                # If team extraction fails, just continue without it
+                pass
+
             return {
                 'player_name': player_name,
                 'player_id': player_id,
+                'team_abbr': team_abbr,
                 'games': len(recent),
                 'PTS': recent['PTS'].tolist(),
                 'REB': recent['REB'].tolist(),
@@ -146,6 +160,7 @@ class PlayerStatsAnalyzer:
 
         return {
             'player_name': player_name,
+            'team_abbr': history.get('team_abbr'),
             'games': history['games'],
             'floors': floors,
             'history': {stat: history[stat] for stat in self.STATS}
