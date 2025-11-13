@@ -66,10 +66,11 @@ print()
 # Test 4: Import scanner modules
 print("4. Testing scanner imports...")
 try:
-    from scanner_v2 import run_scanner
-    from odds_fetcher_v2 import get_odds_for_date
-    from player_stats_v2 import get_player_stats
-    from team_stats_v2 import get_team_stats
+    import scanner_v2
+    import odds_fetcher_v2
+    import player_stats_v2
+    import team_stats_v2
+    import graphics_generator_v2
     print(f"   ✅ All scanner modules imported successfully")
 except Exception as e:
     print(f"   ❌ Scanner import failed: {e}")
