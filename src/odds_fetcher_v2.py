@@ -39,6 +39,8 @@ class OddsFetcher:
         Returns:
             List of game dicts with id, home_team, away_team, commence_time
         """
+        from datetime import datetime, timezone, timedelta
+
         url = f"{self.base_url}/sports/{self.sport}/odds"
         params = {
             'apiKey': self.api_key,
@@ -52,8 +54,20 @@ class OddsFetcher:
         if response.status_code != 200:
             raise Exception(f"Error fetching games: {response.status_code} - {response.text}")
 
-        games = response.json()
-        print(f"✓ Found {len(games)} NBA games")
+        all_games = response.json()
+
+        # Filter to only today's games (in UTC)
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+
+        games = []
+        for game in all_games:
+            commence_time = datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
+            if today_start <= commence_time < today_end:
+                games.append(game)
+
+        print(f"✓ Found {len(games)} NBA games today")
         print(f"  API Requests remaining: {self.requests_remaining}/20,000")
 
         return games
