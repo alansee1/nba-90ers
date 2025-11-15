@@ -54,7 +54,9 @@ def score_picks(scan_date, unscored_only=False):
         entity_type = pick['entity_type']
         stat_type = pick['stat_type']
         line = float(pick['line'])
-        floor = float(pick.get('floor', 0))
+        # OVER bets have floor, UNDER bets have ceiling
+        floor = float(pick['floor']) if pick.get('floor') is not None else None
+        ceiling = float(pick['ceiling']) if pick.get('ceiling') is not None else None
         bet_type = pick['bet_type']
 
         print(f"Scoring: {entity_name} - {stat_type} {bet_type} {line}")
@@ -106,7 +108,7 @@ def score_picks(scan_date, unscored_only=False):
                 'stat': stat_type,
                 'line': line,
                 'actual': actual,
-                'floor': floor,
+                'floor': floor if bet_type == 'OVER' else ceiling,
                 'type': bet_type
             }
 
