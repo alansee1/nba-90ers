@@ -20,13 +20,13 @@ sys.path.append('src')
 from odds_fetcher_v2 import OddsFetcher
 
 def get_first_game_time():
-    """Get the earliest game time for today"""
+    """Get the earliest game time for today and return game info"""
     fetcher = OddsFetcher()
     games = fetcher.get_todays_games()
 
     if not games:
         print("No games found for today")
-        return None
+        return None, None, 0
 
     # Find earliest game
     earliest_game = min(games, key=lambda g: g['commence_time'])
@@ -38,10 +38,12 @@ def get_first_game_time():
     pst = ZoneInfo("America/Los_Angeles")
     game_time_pst = game_time.astimezone(pst)
 
-    print(f"First game: {earliest_game['home_team']} vs {earliest_game['away_team']}")
+    game_info = f"{earliest_game['home_team']} vs {earliest_game['away_team']}"
+
+    print(f"First game: {game_info}")
     print(f"Game time: {game_time_pst.strftime('%I:%M %p %Z')}")
 
-    return game_time
+    return game_time, game_info, len(games)
 
 def schedule_scanner(game_time):
     """Schedule scanner to run 3 hours before game time"""
@@ -99,22 +101,40 @@ def main():
     print("="*70)
 
     try:
-        # Get first game time
-        game_time = get_first_game_time()
+        # Get first game time and info
+        game_time, game_info, num_games = get_first_game_time()
 
         if not game_time:
             print("No games today - skipping scanner")
+
+            # Send no-games notification
+            from notifier import notify_scheduler_no_games
+            notify_scheduler_no_games()
             return
+
+        # Calculate scanner time
+        scanner_time = game_time - timedelta(hours=3)
+        pst = ZoneInfo("America/Los_Angeles")
+        scanner_time_pst = scanner_time.astimezone(pst)
+        game_time_pst = game_time.astimezone(pst)
 
         # Schedule scanner
         schedule_scanner(game_time)
+
+        # Send success notification
+        from notifier import send_slack_notification
+
+        scheduled_time_str = scanner_time_pst.strftime('%I:%M %p %Z')
+        game_time_str = game_time_pst.strftime('%I:%M %p %Z')
+
+        message = f"*First game:* {game_info} at {game_time_str}\n*Total games today:* {num_games}\n*Scanner scheduled for:* {scheduled_time_str}"
+        send_slack_notification(message, title="Scheduler Success", is_error=False)
 
     except Exception as e:
         print(f"❌ Scheduler failed with error: {e}")
 
         # Send error notification
         import traceback
-        sys.path.append('src')
         from notifier import notify_scheduler_error
 
         tb = traceback.format_exc()
