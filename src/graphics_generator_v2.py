@@ -18,14 +18,14 @@ def ensure_output_dir():
         os.makedirs(OUTPUT_DIR)
 
 
-def create_picks_graphic(picks, output_filename=None, max_picks=12):
+def create_picks_graphic(picks, output_filename=None, max_picks=10):
     """
     Create a mobile-optimized graphic showing top picks
 
     Args:
         picks: List of picks from scanner_v2 (player + team picks)
         output_filename: Optional filename (defaults to date-based name)
-        max_picks: Maximum number of picks to display (default 12)
+        max_picks: Maximum number of picks to display (default 10)
 
     Returns:
         Path to saved image
@@ -42,8 +42,8 @@ def create_picks_graphic(picks, output_filename=None, max_picks=12):
         print("No picks to display")
         return None
 
-    # Take only top N picks (sorted by best odds first)
-    sorted_picks = picks[:max_picks]
+    # Sort by best odds (descending, so -150 comes before -300)
+    sorted_picks = sorted(picks, key=lambda p: p['odds'], reverse=True)[:max_picks]
 
     # Mobile-optimized: Square format (1080x1080) for better mobile viewing
     num_picks = len(sorted_picks)
@@ -59,8 +59,15 @@ def create_picks_graphic(picks, output_filename=None, max_picks=12):
             ha='center', va='top', fontsize=24, fontweight='bold',
             color='white', transform=ax.transAxes)
 
-    # Column Headers (closer to title)
-    header_y = 0.92
+    # Subtitle notes (single line with bullets) - more space below title
+    subtitle_y = 0.945
+    subtitle_text = "Odds from DraftKings  •  Up to 10 recent games shown  •  20 games analyzed for floor calculation"
+    ax.text(0.5, subtitle_y, subtitle_text,
+            ha='center', va='top', fontsize=9,
+            color='#888888', transform=ax.transAxes, style='italic')
+
+    # Column Headers - more space below subtitle
+    header_y = 0.90
     ax.text(0.02, header_y, 'ODDS', ha='left', va='center', fontsize=10,
             fontweight='bold', color='#888888', transform=ax.transAxes)
     ax.text(0.10, header_y, 'TEAM', ha='left', va='center', fontsize=10,
@@ -72,8 +79,8 @@ def create_picks_graphic(picks, output_filename=None, max_picks=12):
     ax.text(0.70, header_y, 'LAST 10 GAMES', ha='center', va='center', fontsize=10,
             fontweight='bold', color='#888888', transform=ax.transAxes)
 
-    # Starting Y position - tight to headers
-    y_start = 0.90
+    # Starting Y position - more space below headers
+    y_start = 0.88
     # Dynamically calculate row height based on number of picks
     # Available space from y_start (0.85) to bottom margin (0.05) = 0.80
     available_space = 0.80
@@ -161,10 +168,24 @@ def draw_pick_row(ax, pick, y_pos, row_idx, row_height):
             ha='left', va='center', fontsize=13, fontweight='bold',
             color='#00bfff', transform=ax.transAxes)
 
-    # Column 3: Player/Team name (truncate if too long)
-    name_display = entity_name
-    if len(name_display) > 16:
-        name_display = name_display[:13] + '...'
+    # Column 3: Player/Team name (smart formatting)
+    if is_player:
+        # For players: abbreviate first name if too long
+        if len(entity_name) > 16:
+            parts = entity_name.split()
+            if len(parts) >= 2:
+                name_display = f"{parts[0][0]}. {' '.join(parts[1:])}"
+            else:
+                name_display = entity_name[:13] + '...'
+        else:
+            name_display = entity_name
+    else:
+        # For teams: drop city name if multi-word
+        team_parts = entity_name.split()
+        if len(team_parts) > 2:
+            name_display = " ".join(team_parts[1:])
+        else:
+            name_display = entity_name
 
     ax.text(0.18, text_y, name_display,
             ha='left', va='center', fontsize=12,

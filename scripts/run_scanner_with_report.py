@@ -14,6 +14,7 @@ sys.path.append('src')
 from scanner_v2 import Scanner
 from notifier import notify_scanner_success, notify_scanner_error
 from odds_fetcher_v2 import OddsFetcher
+from twitter_poster import TwitterPoster
 
 
 def main():
@@ -35,15 +36,28 @@ def main():
             game_time_pst = game_time.astimezone(pst)
             first_game_time = f"{earliest_game['home_team']} vs {earliest_game['away_team']} at {game_time_pst.strftime('%I:%M %p %Z')}"
 
+        # Post to Twitter
+        if picks:
+            print(f"\n🐦 Posting to Twitter...")
+            try:
+                twitter = TwitterPoster()
+                tweet_id = twitter.post_picks(picks, graphic_path="graphics/flooorgang_picks_" + datetime.now().strftime('%Y%m%d') + ".png")
+                if tweet_id:
+                    print(f"✅ Posted to Twitter (ID: {tweet_id})")
+                else:
+                    print(f"⚠️  Twitter post failed (check logs)")
+            except Exception as e:
+                print(f"⚠️  Twitter post failed: {e}")
+
         # Send success notification
         notify_scanner_success(
             num_picks=len(picks) if picks else 0,
             top_picks=picks[:4] if picks else None,
             first_game_time=first_game_time,
-            graphic_path="output/todays_picks.png" if picks else None
+            graphic_path="graphics/flooorgang_picks_" + datetime.now().strftime('%Y%m%d') + ".png" if picks else None
         )
 
-        print(f"Scanner completed successfully at {datetime.now()}")
+        print(f"\nScanner completed successfully at {datetime.now()}")
         print(f"✅ Generated {len(picks) if picks else 0} picks")
 
     except Exception as e:

@@ -80,6 +80,49 @@ class TwitterPoster:
             print(f"❌ Error posting to Twitter: {e}")
             return None
 
+    def post_picks(self, picks, graphic_path):
+        """
+        Post today's picks to Twitter with formatted text and graphic
+
+        Args:
+            picks: List of pick dictionaries from scanner
+            graphic_path: Path to generated graphic image
+
+        Returns:
+            Tweet ID if successful, None if failed
+        """
+        from datetime import datetime
+
+        # Build tweet text
+        date_str = datetime.now().strftime('%b %d')
+        num_picks = len(picks)
+
+        tweet_text = f"🏀 NBA Picks - {date_str}\n\n"
+        tweet_text += f"{num_picks} plays identified\n\n"
+
+        # Add top 3 picks as text
+        for i, pick in enumerate(picks[:3], 1):
+            if 'player' in pick:
+                entity = pick['player']
+                stat = pick['stat']
+                line = pick['line']
+                tweet_text += f"{i}. {entity} {stat} O{line}\n"
+            else:
+                entity = pick['team']
+                # Shorten team names
+                team_parts = entity.split()
+                if len(team_parts) > 2:
+                    entity = " ".join(team_parts[1:])
+                bet_type = pick['type']
+                line = pick['line']
+                symbol = 'O' if bet_type == 'OVER' else 'U'
+                tweet_text += f"{i}. {entity} {symbol}{line}\n"
+
+        tweet_text += f"\nFull card below 👇"
+
+        # Post with graphic
+        return self.post_with_image(tweet_text, graphic_path)
+
     def verify_credentials(self):
         """
         Verify that Twitter API credentials are working
